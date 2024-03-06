@@ -4,7 +4,6 @@ import { useAuthStore } from "@/stores/auth";
 import { useLoadingStore } from "@/stores/loading";
 import { chainNames, chainTokens, chainUSDTs } from "@/chains";
 
-
 const selectedTab = ref("");
 const auth = useAuthStore();
 const loader = useLoadingStore();
@@ -125,6 +124,7 @@ const hasInput = computed(() => {
     selectedTab.value === "switchChain" ||
     selectedTab.value === "addToken" ||
     selectedTab.value === "signMessage" ||
+    selectedTab.value === "signTypedData" ||
     selectedTab.value === "sendTransaction" ||
     selectedTab.value === "switchAccountType"
   );
@@ -189,10 +189,20 @@ async function loadRandomMessage() {
   messageToSign.value = `${Math.random()
     .toString(36)
     .substring(2)} ${Math.random().toString(36).substring(2)} ${Math.random()
-    .toString(36)
-    .substring(2)}`;
+      .toString(36)
+      .substring(2)}`;
 }
 
+async function loadSendUSDT() {
+  // Send 1 USDT to the current user
+  sendTxInput.value = {
+    to: chainUSDT.value,
+    data:
+      "0xa9059cbb000000000000000000000000" +
+      from.value.substring(2) +
+      "00000000000000000000000000000000000000000000000000000000000f4240",
+  };
+}
 
 async function loadSendETH() {
   // Send 0.0001 ETH to user
@@ -436,6 +446,64 @@ async function sendTransaction() {
   }
 }
 
+function loadChain(chain) {
+  switch (chain) {
+    case "gnosis":
+      addChainInput.value = {
+        chainId: "0x64",
+        chainName: "Gnosis",
+        nativeCurrency: {
+          symbol: "GNO",
+          decimals: 18,
+        },
+        rpcUrl: "https://gnosis.publicnode.com",
+        blockExplorerUrl: "https://gnosisscan.io",
+        iconUrl: "https://icons.llamao.fi/icons/chains/rsz_xdai.jpg",
+      };
+      break;
+    case "mantle":
+      addChainInput.value = {
+        chainId: "0x1388",
+        chainName: "Mantle",
+        nativeCurrency: {
+          symbol: "MNT",
+          decimals: 18,
+        },
+        rpcUrl: "https://rpc.mantle.xyz",
+        blockExplorerUrl: "https://explorer.mantle.xyz",
+        iconUrl: "https://icons.llamao.fi/icons/chains/rsz_mantle.jpg",
+      };
+      break;
+    case "celo":
+      addChainInput.value = {
+        chainId: "0xa4ec",
+        chainName: "Celo Mainnet",
+        nativeCurrency: {
+          symbol: "CELO",
+          decimals: 18,
+        },
+        rpcUrl: "https://1rpc.io/celo",
+        blockExplorerUrl: "https://celoscan.io",
+        iconUrl: "https://icons.llamao.fi/icons/chains/rsz_celo.jpg",
+      };
+      break;
+    case "cronos":
+      addChainInput.value = {
+        chainId: "0x19",
+        chainName: "Cronos Mainnet",
+        nativeCurrency: {
+          symbol: "CRON",
+          decimals: 18,
+        },
+        rpcUrl: "https://cronos-evm.publicnode.com",
+        blockExplorerUrl: "https://cronoscan.com",
+        iconUrl: "https://icons.llamao.fi/icons/chains/rsz_cronos.jpg",
+      };
+      break;
+    default:
+      break;
+  }
+}
 
 function populateToken(token) {
   addTokenInput.value = {
@@ -466,33 +534,29 @@ function populateToken(token) {
     </div>
     <div class="mt-1" style="display: flex; flex-wrap: wrap">
       <button class="tab" :class="{ selected: selectedTab === 'requestAccounts' }" @click.stop="
-          selectedTab = 'requestAccounts';
-          handleRequestAccounts();
-        " :disabled="!from">
+      selectedTab = 'requestAccounts';
+    handleRequestAccounts();
+    " :disabled="!from">
         Request Accounts
       </button>
       <button class="tab" :class="{ selected: selectedTab === 'showWallet' }" @click.stop="
-          selectedTab = 'showWallet';
-          handleShowWallet();
-        " :disabled="!from">
+      selectedTab = 'showWallet';
+    handleShowWallet();
+    " :disabled="!from">
         Show Wallet
       </button>
       <button class="tab" :class="{ selected: selectedTab === 'switchChain' }" @click.stop="selectedTab = 'switchChain'"
         :disabled="!from">
         Switch Chain
       </button>
-      <button class="tab" :class="{ selected: selectedTab === 'signMessage' }" @click.stop="selectedTab = 'signMessage'"
-        :disabled="!from">
-        Sign Message
-      </button>
       <button class="tab" :class="{ selected: selectedTab === 'sendTransaction' }"
         @click.stop="selectedTab = 'sendTransaction'" :disabled="!from">
         Send Transaction
       </button>
       <button class="tab" :class="{ selected: selectedTab === 'getAccountType' }" @click.stop="
-          selectedTab = 'getAccountType';
-          handleGetAccountType();
-        " :disabled="!from">
+      selectedTab = 'getAccountType';
+    handleGetAccountType();
+    " :disabled="!from">
         Get Account Type
       </button>
       <button class="tab" :class="{ selected: selectedTab === 'switchAccountType' }"
@@ -503,7 +567,7 @@ function populateToken(token) {
     <div class="input mt-1" v-if="hasInput">
       <h4 style="font-weight: 600">Input</h4>
       <div v-if="selectedTab === 'addChain'">
-        <h4 style="margin-bottom: 1rem;">Load Preset Inputs</h4>
+        <h4>Load Input from presets</h4>
         <div style="display: flex; gap: 1rem; flex-wrap: wrap">
           <button @click.stop="loadChain('celo')">Load Celo Mainnet</button>
           <button @click.stop="loadChain('cronos')">Load Cronos Mainnet</button>
@@ -521,91 +585,18 @@ function populateToken(token) {
             Load Linea
           </button>
           <button @click.stop="addChainInput.chainId = '0xe704'">
-            Load Linea Testnet
+            Load Linea Goerli Testnet
           </button>
-        </div>
-      </div>
-      <div v-if="selectedTab === 'addToken'">
-        <h4>Load Input from presets:</h4>
-        <div v-if="displayTokens?.length" style="display: flex; gap: 1rem; flex-wrap: wrap">
-          <button v-for="displayToken in displayTokens" @click.stop="populateToken(displayToken)">
-            {{ displayToken.name }}
-          </button>
-        </div>
-        <div v-else>
-          <span>No presets available for this chain. Please switch the chain to 0x1
-            (Ethereum Mainnet), 0x89 (Polygon Mainnet), 0x38 (BNB Smart Chain
-            Mainnet) or 0xa4b1 (Arbitrum One) to get presets</span>
-        </div>
-      </div>
-      <div v-if="selectedTab === 'signMessage'">
-        <h4>Load Input from presets</h4>
-        <div style="display: flex; gap: 1rem; flex-wrap: wrap">
-          <button @click.stop="loadSiweMessage">Load SIWE Message</button>
-          <button @click.stop="loadRandomMessage">Load Random Message</button>
-        </div>
-      </div>
-      <div v-if="selectedTab === 'signTypedData'">
-        <h4>Load Input from presets</h4>
-        <div v-if="Number(walletChain) === 1" style="display: flex; gap: 1rem; flex-wrap: wrap">
-          <button @click.stop="loadTypedData">Load Sample Typed Data</button>
-        </div>
-        <div v-else>
-          <span>No presets available for this chain. Please switch the chain to 0x1
-            (Ethereum Mainnet) to get presets</span>
         </div>
       </div>
       <div v-if="selectedTab === 'sendTransaction'">
         <h4>Load Input from presets</h4>
         <div style="display: flex; gap: 1rem; flex-wrap: wrap">
           <button @click.stop="loadSendETH">
-            Send Native Tokens
+            Load 0.000001 Native Token Transfer
           </button>
         </div>
       </div>
-      <form v-if="selectedTab === 'addChain'" class="mt-1" style="display: flex; flex-direction: column; gap: 1rem"
-        @submit.prevent="addChain">
-        <div style="display: flex; gap: 1rem">
-          <div class="form-group">
-            <label for="chain-id">Chain ID</label>
-            <input id="chain-id" v-model="addChainInput.chainId" />
-          </div>
-          <div class="form-group">
-            <label for="chain-name">Name</label>
-            <input id="chain-name" v-model="addChainInput.chainName" />
-          </div>
-          <div class="form-group">
-            <label for="chain-rpc">RPC Url</label>
-            <input id="chain-rpc" v-model="addChainInput.rpcUrl" />
-          </div>
-        </div>
-        <div style="display: flex; gap: 1rem; align-items: center">
-          <div class="form-group">
-            <label for="chain-symbol">Currency Symbol</label>
-            <input id="chain-symbol" v-model="addChainInput.nativeCurrency.symbol" />
-          </div>
-          <div class="form-group">
-            <label for="chain-decimals">Currency Decimals</label>
-            <input id="chain-decimals" v-model="addChainInput.nativeCurrency.decimals" type="number" />
-          </div>
-        </div>
-        <div style="display: flex; gap: 1rem">
-          <div class="form-group">
-            <label for="chain-exp">Explorer Url (Optional)</label>
-            <input id="chain-exp" v-model="addChainInput.blockExplorerUrl" />
-          </div>
-          <div class="form-group">
-            <label for="chain-icon">Chain Icon (Optional)</label>
-            <input id="chain-icon" v-model="addChainInput.iconUrl" />
-          </div>
-        </div>
-        <div style="display: flex; gap: 1rem">
-          <button>Add Chain</button>
-          <button type="reset" @click.stop="(input = ''), (output = '')">
-            Reset
-          </button>
-        </div>
-      </form>
       <form v-if="selectedTab === 'switchChain'" class="mt-1" style="display: flex; flex-direction: column; gap: 1rem"
         @submit.prevent="switchChain">
         <div class="form-group">
@@ -614,36 +605,6 @@ function populateToken(token) {
         </div>
         <div style="display: flex; gap: 1rem">
           <button>Switch Chain</button>
-          <button type="reset" @click.stop="(input = ''), (output = '')">
-            Reset
-          </button>
-        </div>
-      </form>
-      <div class="mt-1" v-if="selectedTab === 'addToken'">
-        Add ERC20 details
-      </div>
-      <form v-if="selectedTab === 'addToken'" style="display: flex; flex-direction: column; gap: 1rem"
-        @submit.prevent="addToken">
-        <div class="form-group">
-          <label for="contract">Contract Address</label>
-          <input id="contract" v-model="addTokenInput.contract" />
-        </div>
-        <div style="display: flex; align-items: center; gap: 1rem">
-          <div class="form-group">
-            <label for="symbol">Symbol</label>
-            <input id="symbol" v-model="addTokenInput.symbol" />
-          </div>
-          <div class="form-group">
-            <label for="decimals">Decimals</label>
-            <input id="decimals" v-model="addTokenInput.decimals" />
-          </div>
-          <div class="form-group">
-            <label for="image">Image (Optional)</label>
-            <input id="image" v-model="addTokenInput.image" />
-          </div>
-        </div>
-        <div style="display: flex; gap: 1rem">
-          <button>Add Token</button>
           <button type="reset" @click.stop="(input = ''), (output = '')">
             Reset
           </button>
@@ -659,6 +620,7 @@ function populateToken(token) {
           <label for="val">Amount (Value)</label>
           <input id="val" v-model="sendTxInput.value" />
         </div>
+
         <div style="display: flex; gap: 1rem">
           <button>Send Transaction</button>
           <button type="reset" @click.stop="(input = ''), (output = '')">
