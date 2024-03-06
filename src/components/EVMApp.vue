@@ -593,7 +593,7 @@ function populateToken(token) {
         <h4>Load Input from presets</h4>
         <div style="display: flex; gap: 1rem; flex-wrap: wrap">
           <button @click.stop="loadSendETH">
-            Load 0.000001 Native Token Transfer
+            Simulate a Native Token Transfer
           </button>
         </div>
       </div>
